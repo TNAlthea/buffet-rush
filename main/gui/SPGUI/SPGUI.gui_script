@@ -1,33 +1,34 @@
-function random_customer(self)
+function random_customer(self, node)
 	local RENDANG = hash("rendang")
 	local STEAK = hash("steak")
 	local IKANTELURASIN = hash("ikantelurasin")
 	
 	local rand = math.random(1, 3)
-	print(rand)
+
 	if rand == 1 then
-		customer_queue(self, RENDANG)
+		customer_queue(self, RENDANG, node)
 	elseif rand == 2 then
-		customer_queue(self, STEAK)
+		customer_queue(self, STEAK, node)
 	elseif rand == 3 then
-		customer_queue(self, IKANTELURASIN)
+		customer_queue(self, IKANTELURASIN, node)
 	end
 	
 end
 
-function customer_queue(self, customer_id)
+function customer_queue(self, customer_id, node)
 	local customer = self.listCustomer[customer_id]
-	print("tesuto", customer_id)
+	
 	if self.customerQueue.currentCustomerCount + 1 > self.customerQueue.maxCustomer then
 		return false, "Customer queue is full!"
 	end	
-	table.insert(self.customerQueue.customer, customer)
+	
+	table.insert(self.customerQueue.customer, {customer = customer, node = node})
 	self.customerQueue.currentCustomerCount = self.customerQueue.currentCustomerCount + 1
 	
 	return true
 end 
 
-function active_customer(self, customer_id)
+function active_customer(self, customer_id, node)
 	local customer = self.customerQueue.customer[customer_id]
 
 	if self.activeCustomer.activeCount + 1 > self.activeCustomer.maxActive then
@@ -57,12 +58,17 @@ function init(self)
 	self.points = 0
 	self.combos = 0
 	self.prevMessage = nil
-	self.customerQueueCount = 1
+	self.customerQueueCount = 0
 	self.newCustomerTurns = 1
 	self.queue = {}
 
 	self.listCustomer = {
 		[RENDANG] = {
+			name = "rendang",
+			cheeseReq = 0,
+			eggReq = 0,
+			sausageReq = 0,
+			fishReq = 0,
 			meatReq = 4,
 			riceReq = 5,
 			patience = 8,
@@ -70,17 +76,24 @@ function init(self)
 			penalty = 5,
 		},
 		[STEAK] = {
+			name = "steak",
+			cheeseReq = 2,
+			eggReq = 0,
+			sausageReq = 3,
+			fishReq = 0,
 			meatReq = 6,
 			riceReq = 3,
-			sausageReq = 3,
-			cheeseReq = 2,
 			patience = 12,
 			bonusPoints = 14,
 			penalty = 7,
 		},
 		[IKANTELURASIN] = {
-			fishReq = 6,
+			name = "ikan telur asin",
+			cheeseReq = 0,
 			eggReq = 2,
+			sausageReq = 3,
+			fishReq = 6,
+			meatReq = 0,
 			riceReq = 4,
 			patience = 7,
 			bonusPoints = 7,
@@ -100,7 +113,6 @@ function init(self)
 		customer = {},
 	}
 
-	random_customer(self)
 end
 
 function final(self)
@@ -129,21 +141,60 @@ function on_message(self, message_id, message, sender)
 		gui.set_text(turns_node, self.turns)
 		self.prevMessage = message_id
 
+		-- reduce patience by 1 for all customers in the queue
+
+		for i, v in ipairs(self.customerQueue.customer) do
+			self.customerQueue.customer[i].customer.patience = self.customerQueue.customer[i].customer.patience - 1
+			gui.set_text(gui.get_node("patienceCounter" .. i), self.customerQueue.customer[i].customer.patience)
+
+			-- if patience are running low (less than 3), set the color into red
+			if (self.customerQueue.customer[i].customer.patience < 3) then
+				gui.set_color(gui.get_node("patienceCounter" .. i), vmath.vector3(0, 255, 0))
+			end
+
+		end
+		
 		local gui_root = gui.get_node("listQueue")
+
+		-- New customer comes in every 2 turns if not full (max 3 customer in Queue)
 		if self.customerQueueCount < 3 and self.newCustomerTurns == 0 then
+			self.customerQueueCount = self.customerQueueCount + 1
+			self.newCustomerTurns = 2
+
+			-- clone template node
 			local cloned_gui=gui.clone_tree(gui_root)
-			
+			local pos = gui.get_position(gui_root)
+			local newPos = pos + vmath.vector3(295 * self.customerQueueCount, 0, 0)
+
+			-- give unique node ID into cloned template nodes
 			gui.set_id(cloned_gui[hash("listQueue")], "listQueue" .. self.customerQueueCount)
 			
-			local pos = gui.get_position(gui_root)
-			local newPos = pos + vmath.vector3(300 * self.customerQueueCount, 0, 0)
-			
+			-- attach customer menu order into the node and show on the GUI
+			gui.set_alpha(cloned_gui[hash("listQueue")], 1)
 			gui.animate(cloned_gui[hash("listQueue")], gui.PROP_POSITION, newPos, gui.EASING_INOUTSINE, 0.7)
 
-			random_customer(self)
-			self.customerQueueCount = self.customerQueueCount + 1
-			self.newCustomerTurns = 1
+			random_customer(self, gui.get_id(cloned_gui[hash("listQueue")]))
+
+			gui.set_text((cloned_gui[hash("namaMenu")]), self.customerQueue.customer[self.customerQueueCount].customer.name)
+			gui.set_id((cloned_gui[hash("namaMenu")]), "namaMenu" .. self.customerQueueCount)
 			
+			gui.set_text((cloned_gui[hash("cheeseCounter")]), self.customerQueue.customer[self.customerQueueCount].customer.cheeseReq)
+			gui.set_id((cloned_gui[hash("cheeseCounter")]), "cheeseCounter" .. self.customerQueueCount)
+			
+			gui.set_text((cloned_gui[hash("eggCounter")]), self.customerQueue.customer[self.customerQueueCount].customer.eggReq)
+			gui.set_id((cloned_gui[hash("eggCounter")]), "eggCounter" .. self.customerQueueCount)
+			
+			gui.set_text((cloned_gui[hash("meatCounter")]), self.customerQueue.customer[self.customerQueueCount].customer.meatReq)
+			gui.set_id((cloned_gui[hash("meatCounter")]), "meatCounter" .. self.customerQueueCount)
+
+			gui.set_text((cloned_gui[hash("riceCounter")]), self.customerQueue.customer[self.customerQueueCount].customer.riceReq)
+			gui.set_id((cloned_gui[hash("riceCounter")]), "riceCounter" .. self.customerQueueCount)
+			
+			gui.set_text((cloned_gui[hash("sausageCounter")]), self.customerQueue.customer[self.customerQueueCount].customer.sausageReq)
+			gui.set_id((cloned_gui[hash("sausageCounter")]), "sausageCounter" .. self.customerQueueCount)
+			
+			gui.set_text((cloned_gui[hash("patienceCounter")]), self.customerQueue.customer[self.customerQueueCount].customer.patience)
+			gui.set_id((cloned_gui[hash("patienceCounter")]), "patienceCounter" .. self.customerQueueCount)
 		end
 		if self.newCustomerTurns > 0 then
 			self.newCustomerTurns = self.newCustomerTurns - 1
@@ -156,6 +207,7 @@ function on_message(self, message_id, message, sender)
 	if message_id == hash("update_points") and self.prevMessage == hash("reduce_turns") then
 		self.points = self.points + message.points
 		gui.set_text(points_node, self.points)
+		sound.play("sounds#onMatch", {delay = 0, gain = 1, pan = -1.0, speed = 0.85})
 		self.prevMessage = hash("reduce_turns") -- in case of continous match so this function can be called repeatedly until the combo ends 
 	end
 end
@@ -174,11 +226,16 @@ function on_input(self, action_id, action)
 	if action_id == hash("touch") and action.pressed and self.active then
 		if gui.pick_node(gui.get_node("pause"), action.x, action.y) then
 			local i = 0
-			for _,data in ipairs(self.customerQueue) do
-				print("hey")
+			for _,customer in ipairs(self.customerQueue.customer) do
+				print(_ .. self.customerQueue.customer[_].customer.name .. "\n")
+				i = i + 1
 			end
-			print(i)
 		end
+		-- for _,customer in ipairs(self.customerQueue.customer) do
+		-- 	if gui.pick_node(gui.get_node("patienceCounter" .. _), action.x, action.y) then
+		-- 		print("TADAA " .. self.customerQueue.customer[_].customer.name .. "\n")
+		-- 	end
+		-- end
 	end
 end
 
