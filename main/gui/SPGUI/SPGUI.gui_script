@@ -160,8 +160,6 @@ function active_customer(self, customer_id, node)
 
 	self.activeCustomer.activeCount = self.activeCustomer.activeCount + 1
 	table.insert(self.activeCustomer.customer, customer)
-	-- reduce queue count
-	self.customerQueueCount = self.customerQueueCount - 1
 	
 	local gui_root = gui.get_node("activeCustomer")
 	-- clone template node
@@ -263,64 +261,267 @@ function move_queue(self, index)
 		},
 	}
 	
-	nextIndex = index + 1
-	tableIndex = 0
-	for _, data in ipairs(self.customerQueue.customer) do
-		tableIndex = tableIndex + 1
+	-- delete all queue gui nodes first
+	for i = 1, self.customerQueueCount do
+		gui.delete_node(gui.get_node("listQueue" .. i))
 	end
-	
 	table.remove(self.customerQueue.customer, index)
+
+	-- reduce queue count amount
+	self.customerQueueCount = self.customerQueueCount - 1
+	self.customerQueue.currentCustomerCount = self.customerQueue.currentCustomerCount - 1
+	if self.customerQueueCount > 0 then		
+		redrawQueueNode(self)
+	end
+end
+
+function move_active(self, index)
+	local RENDANG = hash("rendang")
+	local STEAK = hash("steak")
+	local IKANTELURASIN = hash("ikantelurasin")
+	local CAPCAY = hash("capcay")
+
+	local listCustomer = {
+		[RENDANG] = {
+			name = "rendang",
+			hash = RENDANG,
+			cheeseReq = 0,
+			eggReq = 0,
+			sausageReq = 0,
+			fishReq = 0,
+			meatReq = 12,
+			riceReq = 7,
+			patience = 8,
+			bonusPoints = 10,
+			penalty = 5,
+		},
+		[STEAK] = {
+			name = "steak",
+			hash = STEAK,
+			cheeseReq = 2,
+			eggReq = 0,
+			sausageReq = 3,
+			fishReq = 0,
+			meatReq = 6,
+			riceReq = 3,
+			patience = 12,
+			bonusPoints = 14,
+			penalty = 7,
+		},
+		[IKANTELURASIN] = {
+			name = "ikan telur asin",
+			hash = IKANTELURASIN,
+			cheeseReq = 0,
+			eggReq = 2,
+			sausageReq = 3,
+			fishReq = 6,
+			meatReq = 0,
+			riceReq = 4,
+			patience = 7,
+			bonusPoints = 7,
+			penalty = 3,
+		},
+		[CAPCAY] = {
+			name = "capcay",
+			hash = CAPCAY,
+			cheeseReq = 0,
+			eggReq = 3,
+			sausageReq = 3,
+			fishReq = 4,
+			meatReq = 4,
+			riceReq = 4,
+			patience = 9,
+			bonusPoints = 11,
+			penalty = 5,
+		},
+	}
+
+	-- delete all queue gui nodes first
+	for i = 1, self.activeCustomer.activeCount do
+		gui.delete_node(gui.get_node("activeCustomer" .. i))
+	end
+	table.remove(self.activeCustomer.customer, index)
+
+	-- reduce queue count amount
+	self.activeCustomer.activeCount = self.activeCustomer.activeCount - 1
 	
-	local i = index
+	if self.activeCustomer.activeCount > 0 then		
+		redrawActiveNode(self)
+	end
+end
 
-	if tableIndex == 1 then
-		gui.delete_node(gui.get_node("listQueue" .. tableIndex))
-	-- delete the queue node then move the other queue
-	elseif tableIndex > 1 then
-		local gui_root = gui.get_node("listQueue")
-		-- delete all queue gui nodes first
-		for i = index, tableIndex do
-			gui.delete_node(gui.get_node("listQueue" .. i))
-		end
+-- used to redraw queue
+function redrawQueueNode(self)
+	local gui_root = gui.get_node("listQueue")
 
-		-- redraw rest of queue with their new IDs
-		for i = 1, tableIndex-1 do
-			local cloned_gui=gui.clone_tree(gui_root)
-			local pos = gui.get_position(gui_root)
-			local newPos = pos + vmath.vector3(295 * i, 0, 0)
-			
-			self.customerQueue.customer[i].node = hash("listQueue" .. i)
-			
-			-- reassign gui node id 
-			gui.set_id(cloned_gui[hash("listQueue")], "listQueue" .. i)
+	-- redraw rest of queue along with their new IDs
+	for i = 1, self.customerQueueCount do
+		local cloned_gui=gui.clone_tree(gui_root)
+		local pos = gui.get_position(gui_root)
+		local newPos = pos + vmath.vector3(295 * i, 0, 0)
 
-			-- attach customer menu order into the node and show on the GUI
-			gui.set_alpha(cloned_gui[hash("listQueue")], 1)
-			gui.animate(cloned_gui[hash("listQueue")], gui.PROP_POSITION, newPos, gui.EASING_INOUTSINE, 0.7)
+		self.customerQueue.customer[i].node = hash("listQueue" .. i)
 
-			gui.set_text((cloned_gui[hash("namaMenu")]), self.customerQueue.customer[i].customer.name)
-			gui.set_id((cloned_gui[hash("namaMenu")]), "namaMenu" .. i)
+		-- reassign gui node id 
+		gui.set_id(cloned_gui[hash("listQueue")], "listQueue" .. i)
 
-			gui.set_text((cloned_gui[hash("cheeseCounter")]), self.customerQueue.customer[i].customer.cheeseReq)
-			gui.set_id((cloned_gui[hash("cheeseCounter")]), "cheeseCounter" .. i)
+		-- attach customer menu order into the node and show on the GUI
+		gui.set_alpha(cloned_gui[hash("listQueue")], 1)
+		gui.animate(cloned_gui[hash("listQueue")], gui.PROP_POSITION, newPos, gui.EASING_INOUTSINE, 0.7)
 
-			gui.set_text((cloned_gui[hash("eggCounter")]), self.customerQueue.customer[i].customer.eggReq)
-			gui.set_id((cloned_gui[hash("eggCounter")]), "eggCounter" .. i)
+		gui.set_text((cloned_gui[hash("namaMenu")]), self.customerQueue.customer[i].customer.name)
+		gui.set_id((cloned_gui[hash("namaMenu")]), "namaMenu" .. i)
 
-			gui.set_text((cloned_gui[hash("meatCounter")]), self.customerQueue.customer[i].customer.meatReq)
-			gui.set_id((cloned_gui[hash("meatCounter")]), "meatCounter" .. i)
+		gui.set_text((cloned_gui[hash("cheeseCounter")]), self.customerQueue.customer[i].customer.cheeseReq)
+		gui.set_id((cloned_gui[hash("cheeseCounter")]), "cheeseCounter" .. i)
 
-			gui.set_text((cloned_gui[hash("riceCounter")]), self.customerQueue.customer[i].customer.riceReq)
-			gui.set_id((cloned_gui[hash("riceCounter")]), "riceCounter" .. i)
+		gui.set_text((cloned_gui[hash("eggCounter")]), self.customerQueue.customer[i].customer.eggReq)
+		gui.set_id((cloned_gui[hash("eggCounter")]), "eggCounter" .. i)
 
-			gui.set_text((cloned_gui[hash("sausageCounter")]), self.customerQueue.customer[i].customer.sausageReq)
-			gui.set_id((cloned_gui[hash("sausageCounter")]), "sausageCounter" .. i)
+		gui.set_text((cloned_gui[hash("meatCounter")]), self.customerQueue.customer[i].customer.meatReq)
+		gui.set_id((cloned_gui[hash("meatCounter")]), "meatCounter" .. i)
 
-			gui.set_text((cloned_gui[hash("patienceCounter")]), self.customerQueue.customer[i].customer.patience)
-			gui.set_id((cloned_gui[hash("patienceCounter")]), "patienceCounter" .. i)
+		gui.set_text((cloned_gui[hash("riceCounter")]), self.customerQueue.customer[i].customer.riceReq)
+		gui.set_id((cloned_gui[hash("riceCounter")]), "riceCounter" .. i)
+
+		gui.set_text((cloned_gui[hash("sausageCounter")]), self.customerQueue.customer[i].customer.sausageReq)
+		gui.set_id((cloned_gui[hash("sausageCounter")]), "sausageCounter" .. i)
+
+		gui.set_text((cloned_gui[hash("patienceCounter")]), self.customerQueue.customer[i].customer.patience)
+		gui.set_id((cloned_gui[hash("patienceCounter")]), "patienceCounter" .. i)
+	end
+end
+
+function redrawActiveNode(self)
+	local gui_root = gui.get_node("activeCustomer")
+	
+	-- redraw rest of queue along with their new IDs
+	for i = 1, self.activeCustomer.activeCount do
+		local cloned_gui=gui.clone_tree(gui_root)
+		local pos = gui.get_position(gui_root)
+		local newPos = pos + vmath.vector3(0, -170 * i, 0)
+
+		-- reassign gui node id 
+		gui.set_id(cloned_gui[hash("activeCustomer")], "activeCustomer" .. i)
+
+		-- attach customer menu order into the node and show on the GUI
+		gui.set_alpha(cloned_gui[hash("activeCustomer")], 1)
+		gui.set_position(cloned_gui[hash("activeCustomer")], newPos)
+		-- gui.animate(cloned_gui[hash("activeCustomer")], gui.PROP_POSITION, newPos, gui.EASING_INOUTSINE, 0.7)
+
+		gui.set_text((cloned_gui[hash("namaMenuActive")]), self.activeCustomer.customer[i].name)
+		gui.set_id((cloned_gui[hash("namaMenuActive")]), "namaMenuActive" .. i)
+
+		gui.set_text((cloned_gui[hash("cheeseActiveCounter")]), self.activeCustomer.customer[i].cheeseReq)
+		gui.set_id((cloned_gui[hash("cheeseActiveCounter")]), "cheeseActiveCounter" .. i)
+
+		gui.set_text((cloned_gui[hash("eggActiveCounter")]), self.activeCustomer.customer[i].eggReq)
+		gui.set_id((cloned_gui[hash("eggActiveCounter")]), "eggActiveCounter" .. i)
+
+		gui.set_text((cloned_gui[hash("meatActiveCounter")]), self.activeCustomer.customer[i].meatReq)
+		gui.set_id((cloned_gui[hash("meatActiveCounter")]), "meatActiveCounter" .. i)
+
+		gui.set_text((cloned_gui[hash("riceActiveCounter")]), self.activeCustomer.customer[i].riceReq)
+		gui.set_id((cloned_gui[hash("riceActiveCounter")]), "riceActiveCounter" .. i)
+
+		gui.set_text((cloned_gui[hash("sausageActiveCounter")]), self.activeCustomer.customer[i].sausageReq)
+		gui.set_id((cloned_gui[hash("sausageActiveCounter")]), "sausageActiveCounter" .. i)
+
+		gui.set_text((cloned_gui[hash("patienceActiveCounter")]), self.activeCustomer.customer[i].patience)
+		gui.set_id((cloned_gui[hash("patienceActiveCounter")]), "patienceActiveCounter" .. i)
+	end
+end
+
+-- used for completing customer menu progress
+function ingredientsHandler(self, ingredients, amount)
+	local ingredientsAmount = amount
+
+	for i, customer in ipairs(self.activeCustomer.customer) do
+		-- find the menu that need particular ingredients, then substract by amount. 
+		if (ingredients == hash("cheese")) then
+			if (self.activeCustomer.customer[i].cheeseReq > 0) then
+				self.activeCustomer.customer[i].cheeseReq = self.activeCustomer.customer[i].cheeseReq - amount
+				amount = amount - amount
+				-- if the amount excessed the requirement for that menu, return the amount back to be passed into next index
+				if (self.activeCustomer.customer[i].cheeseReq < 0) then
+					amount = math.abs(self.activeCustomer.customer[i].cheeseReq)
+					self.activeCustomer.customer[i].cheeseReq = 0
+				end
+			end
+		elseif (ingredients == hash("egg")) then
+			if (self.activeCustomer.customer[i].eggReq > 0) then
+				self.activeCustomer.customer[i].eggReq = self.activeCustomer.customer[i].eggReq - amount
+				amount = amount - amount
+				-- if the amount excessed the requirement for that menu, return the amount back to be passed into next index
+				if (self.activeCustomer.customer[i].eggReq < 0) then
+					amount = math.abs(self.activeCustomer.customer[i].eggReq)
+					self.activeCustomer.customer[i].eggReq = 0
+				end
+			end
+		elseif (ingredients == hash("fish")) then
+			if (self.activeCustomer.customer[i].fishReq > 0) then
+				self.activeCustomer.customer[i].fishReq = self.activeCustomer.customer[i].fishReq - amount
+				amount = amount - amount
+				-- if the amount excessed the requirement for that menu, return the amount back to be passed into next index
+				if (self.activeCustomer.customer[i].fishReq < 0) then
+					amount = math.abs(self.activeCustomer.customer[i].fishReq)
+					self.activeCustomer.customer[i].fishReq = 0
+				end
+			end
+		elseif (ingredients == hash("meat")) then
+			if (self.activeCustomer.customer[i].meatReq > 0) then
+				self.activeCustomer.customer[i].meatReq = self.activeCustomer.customer[i].meatReq - amount
+				amount = amount - amount
+				-- if the amount excessed the requirement for that menu, return the amount back to be passed into next index
+				if (self.activeCustomer.customer[i].meatReq < 0) then
+					amount = math.abs(self.activeCustomer.customer[i].meatReq)
+					self.activeCustomer.customer[i].meatReq = 0
+				end
+			end
+		elseif (ingredients == hash("rice")) then
+			if (self.activeCustomer.customer[i].riceReq > 0) then
+				self.activeCustomer.customer[i].riceReq = self.activeCustomer.customer[i].riceReq - amount
+				amount = amount - amount
+				-- if the amount excessed the requirement for that menu, return the amount back to be passed into next index
+				if (self.activeCustomer.customer[i].riceReq < 0) then
+					amount = math.abs(self.activeCustomer.customer[i].riceReq)
+					self.activeCustomer.customer[i].riceReq = 0
+				end
+			end
+		elseif (ingredients == hash("sausage")) then
+			if (self.activeCustomer.customer[i].sausageReq > 0) then
+				self.activeCustomer.customer[i].sausageReq = self.activeCustomer.customer[i].sausageReq - amount
+				amount = amount - amount
+				-- if the amount excessed the requirement for that menu, return the amount back to be passed into next index
+				if (self.activeCustomer.customer[i].sausageReq < 0) then
+					amount = math.abs(self.activeCustomer.customer[i].sausageReq)
+					self.activeCustomer.customer[i].sausageReq = 0
+				end
+			end
 		end
 	end
-	
+
+	-- redraw
+	for i, data in ipairs(self.activeCustomer.customer) do
+		gui.delete_node(gui.get_node("activeCustomer" .. i))
+	end
+	redrawActiveNode(self)
+end
+
+-- check for menu completion progress
+function checkCompletion(self, index)
+	local did_complete = false 
+
+	-- remove the index and give reward
+	if (self.activeCustomer.customer[index].cheeseReq == 0) and 
+	(self.activeCustomer.customer[index].eggReq == 0) and 
+	(self.activeCustomer.customer[index].fishReq == 0) and 
+	(self.activeCustomer.customer[index].meatReq == 0) and 
+	(self.activeCustomer.customer[index].riceReq == 0) and 
+	(self.activeCustomer.customer[index].sausageReq == 0) then
+		msg.post("#", "update_points", {points = self.activeCustomer.customer[index].bonusPoints, color = hash("nil")})
+		move_active(self, index)
+	end
 end
 
 function init(self)
@@ -342,7 +543,7 @@ function init(self)
 
 	self.customerQueue = {
 		currentCustomerCount = 0,
-		maxCustomer = 5,
+		maxCustomer = 3,
 		customer = {},
 	}
 
@@ -351,7 +552,6 @@ function init(self)
 		maxActive = 3,
 		customer = {},
 	}
-
 end
 
 function final(self)
@@ -381,20 +581,30 @@ function on_message(self, message_id, message, sender)
 		self.prevMessage = message_id
 		
 		local gui_root = gui.get_node("listQueue")
-		
+
+		-- patience turns handler
 		for _,data in ipairs(self.activeCustomer.customer) do 
+			-- reduce patience by 1, if less than 3 then set the color to red
 			self.activeCustomer.customer[_].patience = self.activeCustomer.customer[_].patience - 1
 			if self.activeCustomer.customer[_].patience < 3 then
 				gui.set_color(gui.get_node("patienceActiveCounter" .. _), vmath.vector3(1, 0, 0))
 			end
-			if self.activeCustomer.customer[_].patience == 0 then
-				msg.post("#", "update_points", {points = -self.activeCustomer.customer[_].penalty})
-			end
 			gui.set_text(gui.get_node("patienceActiveCounter" .. _), self.activeCustomer.customer[_].patience)
 		end
+
+		-- add menu completion progress
+		ingredientsHandler(self, message.color, message.points + 2)
 		
+		-- if patience reached 0
+		for _,data in ipairs(self.activeCustomer.customer) do 
+			if self.activeCustomer.customer[_].patience == 0 then
+				msg.post("#", "update_points", {points = -self.activeCustomer.customer[_].penalty})
+				move_active(self, _)
+			end
+		end
+
 		-- New customer comes in every 2 turns if not full (max 3 customer in Queue)
-		if self.customerQueueCount < 3 and self.newCustomerTurns == 0 then
+		if self.customerQueueCount < self.customerQueue.maxCustomer and self.newCustomerTurns == 0 then
 			self.customerQueueCount = self.customerQueueCount + 1
 			self.newCustomerTurns = 2
 
@@ -420,6 +630,9 @@ function on_message(self, message_id, message, sender)
 			
 			gui.set_text((cloned_gui[hash("eggCounter")]), self.customerQueue.customer[self.customerQueueCount].customer.eggReq)
 			gui.set_id((cloned_gui[hash("eggCounter")]), "eggCounter" .. self.customerQueueCount)
+
+			gui.set_text((cloned_gui[hash("fishCounter")]), self.customerQueue.customer[self.customerQueueCount].customer.fishReq)
+			gui.set_id((cloned_gui[hash("fishCounter")]), "fishCounter" .. self.customerQueueCount)
 			
 			gui.set_text((cloned_gui[hash("meatCounter")]), self.customerQueue.customer[self.customerQueueCount].customer.meatReq)
 			gui.set_id((cloned_gui[hash("meatCounter")]), "meatCounter" .. self.customerQueueCount)
@@ -447,11 +660,17 @@ function on_message(self, message_id, message, sender)
 		sound.play("sounds#onMatch", {delay = 0, gain = 1, pan = -1.0, speed = 0.85})
 		self.prevMessage = hash("reduce_turns") -- in case of continous match so this function can be called repeatedly until the combo ends 
 
+		-- check for completion
+		for _,data in ipairs(self.activeCustomer.customer) do
+			checkCompletion(self, _)
+		end
+		
 		-- if score are positive
 		if message.points > 0 then
 			gui.set_alpha(gui.get_node("pointsChange"), 1)
 			gui.set_text(gui.get_node("pointsChange"), "+" .. message.points)
 			gui.set_color(gui.get_node("pointsChange"), vmath.vector3(0, 1, 0)) -- green color
+			
 		else 
 			gui.set_alpha(gui.get_node("pointsChange"), 1)
 			gui.set_text(gui.get_node("pointsChange"), message.points)
@@ -479,9 +698,7 @@ function on_input(self, action_id, action)
 		if gui.pick_node(gui.get_node("pause"), action.x, action.y) then
 			print("pause klik")
 			local i = 0
-			for _,data in ipairs(self.customerQueue.customer) do
-				-- print(self.customerQueue.customer[_].node)
-			end
+			pprint(self.activeCustomer.customer)
 			pprint(self.customerQueue.customer)
 		end
 		for _,customer in ipairs(self.customerQueue.customer) do

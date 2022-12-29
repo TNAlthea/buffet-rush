@@ -169,6 +169,7 @@ local function remove_matching_neighbors(board, callback)
 	local duration = 0
 	local blockCount = 0
 	local did_remove = false
+	local blockColor = nil
 	
 	-- handle t, l and cross shaped block formations in a first pass
 	for block in M.iterate_blocks(board) do
@@ -176,7 +177,7 @@ local function remove_matching_neighbors(board, callback)
 			did_remove = true
 			blockCount = blockCount + #block.horisontal_neighbors + #block.vertical_neighbors
 			board.on_match(board, block, block.horisontal_neighbors, block.vertical_neighbors)
-			
+			blockColor = block.color
 		end
 	end
 
@@ -186,13 +187,14 @@ local function remove_matching_neighbors(board, callback)
 			did_remove = true
 			blockCount = blockCount + #block.horisontal_neighbors + #block.vertical_neighbors
 			board.on_match(board, block, block.horisontal_neighbors, block.vertical_neighbors)
+			blockColor = block.color
 		end
 	end
 	
 	if did_remove then
 		if blockCount ~= 0 then
 			blockCount = blockCount + 1
-			msg.post("gui#SPGUI", "update_points", {points = blockCount - 2})
+			msg.post("gui#SPGUI", "update_points", {points = blockCount - 2, color = blockColor})
 		end
 		delay(duration, callback)
 	else
@@ -708,7 +710,6 @@ function M.remove_block(board, block, no_trigger)
 		-- other special block effect takes place at the same time
 		return
 	end
-	--color disini
 	msg.post(block.id, M.REMOVE)
 	block.removed = true
 	--
