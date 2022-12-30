@@ -592,8 +592,7 @@ function on_message(self, message_id, message, sender)
 			gui.set_text(gui.get_node("patienceActiveCounter" .. _), self.activeCustomer.customer[_].patience)
 		end
 
-		-- add menu completion progress
-		ingredientsHandler(self, message.color, message.points + 2)
+		
 		
 		-- if patience reached 0
 		for _,data in ipairs(self.activeCustomer.customer) do 
@@ -660,6 +659,9 @@ function on_message(self, message_id, message, sender)
 		sound.play("sounds#onMatch", {delay = 0, gain = 1, pan = -1.0, speed = 0.85})
 		self.prevMessage = hash("reduce_turns") -- in case of continous match so this function can be called repeatedly until the combo ends 
 
+		-- add menu completion progress
+		ingredientsHandler(self, message.color, message.points + 2)
+		
 		-- check for completion
 		for _,data in ipairs(self.activeCustomer.customer) do
 			checkCompletion(self, _)
