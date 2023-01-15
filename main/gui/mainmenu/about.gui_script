@@ -1,0 +1,34 @@
+function init(self)
+	msg.post("#", "hide_about")
+	self.active = false
+	self.prev_box_position = gui.get_position(gui.get_node("box"))
+
+end
+
+function on_message(self, message_id, message, sender)
+	if message_id == hash("show_about") then
+		msg.post("#", "enable")
+		self.active = true
+		-- gui.set_position(gui.get_node("box"), vmath.vector3(750, 500, 0))
+		gui.animate(gui.get_node("box"), gui.PROP_POSITION, vmath.vector4(750, 500, 0, 0), go.EASING_OUTQUINT, 0.5)
+		gui.set_visible(gui.get_node("box"), 1)
+		msg.post(".", "acquire_input_focus")
+	elseif message_id == hash("hide_about") then
+		msg.post("#", "disable")
+		self.active = false
+		gui.set_visible(gui.get_node("box"), 0)
+		
+		-- reset to prev position so when the about button clicked again the animation still works fine. 
+		gui.set_position(gui.get_node("box"), self.prev_box_position)
+	end
+end
+
+function on_input(self, action_id, action)
+	local back = gui.get_node("back")
+	if action_id == hash("touch") and action.pressed and self.active then
+		if gui.pick_node(back, action.x, action.y) then
+			msg.post("#", "hide_about")
+			msg.post("/guis#mainmenu", "reacquire_input_focus")
+		end
+	end
+end

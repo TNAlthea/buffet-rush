@@ -1,0 +1,18 @@
+function init(self)
+	msg.post(".", "acquire_input_focus")
+end
+
+
+function on_message(self, message_id, message, sender)
+	if message_id == hash("load_game") then
+		msg.post("#SP_proxy", "async_load")
+	elseif message_id == hash("unload_game") then
+		local proxy = "#SP_proxy"
+		msg.post(proxy, "disable")
+		msg.post(proxy, "final")
+		msg.post(proxy, "unload")
+	elseif message_id == hash("proxy_loaded") then
+		msg.post(sender, "enable")
+		msg.post("#mainmenu", "disable")
+	end	
+end

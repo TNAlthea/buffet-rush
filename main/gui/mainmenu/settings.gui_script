@@ -1,0 +1,75 @@
+function init(self)
+	msg.post("#", "hide_settings")
+	self.active = false
+	self.prev_box_position = gui.get_position(gui.get_node("outerbox"))
+
+	self.bgmVolume = 0
+	self.sfxVolume = 0
+end
+
+function on_message(self, message_id, message, sender)
+	if message_id == hash("show_settings") then
+		msg.post("#", "enable")
+		msg.post(".", "acquire_input_focus")
+		self.active = true
+		self.bgmVolume = message.bgm_value
+
+		-- gui.set_position(gui.get_node("box"), vmath.vector3(750, 500, 0))
+		gui.animate(gui.get_node("outerbox"), gui.PROP_POSITION, vmath.vector4(750, 500, 0, 0), go.EASING_OUTQUINT, 0.5)
+		gui.set_visible(gui.get_node("outerbox"), 1)
+		
+		gui.set_text(gui.get_node("bgm_volume_value"), self.bgmVolume)
+	elseif message_id == hash("hide_settings") then
+		msg.post("#", "disable")
+		self.active = false
+		msg.post(".", "release_input_focus")
+		gui.set_visible(gui.get_node("outerbox"), 0)
+
+		-- reset to prev position so when the about button clicked again the animation still works fine. 
+		gui.set_position(gui.get_node("outerbox"), self.prev_box_position)
+	end
+end
+
+function on_input(self, action_id, action)
+	local back = gui.get_node("back")
+	local increaseBGM = gui.get_node("increase_bgm_btn")
+	local decreaseBGM = gui.get_node("decrease_bgm_btn")
+
+	local filename = sys.get_save_file("sys_save_load", "volume")
+	local data = sys.load(filename) 
+	
+	if action_id == hash("touch") and action.pressed and self.active then
+		if gui.pick_node(back, action.x, action.y) then
+			msg.post("#", "hide_settings")
+			msg.post("/guis#mainmenu", "reacquire_input_focus")
+		elseif gui.pick_node(increaseBGM, action.x, action.y) then
+			if (self.bgmVolume < 0.9) then
+			msg.post("/guis#mainmenu", "increase_bgm")
+			self.bgmVolume = self.bgmVolume + 0.1
+			
+			gui.set_text(gui.get_node("bgm_volume_value"), self.bgmVolume)
+			gui.animate(increaseBGM, gui.PROP_SCALE, vmath.vector3(1.5, 1.5, 0), go.EASING_OUTQUINT, 0.2)
+			timer.delay(0.2, false, function()
+				gui.animate(increaseBGM, gui.PROP_SCALE, vmath.vector3(1.2, 1.2, 0), go.EASING_OUTQUINT, 0.2)
+			end)
+			sys.save(filename, { volume = self.bgmVolume })
+			end 
+		elseif gui.pick_node(decreaseBGM, action.x, action.y) then
+			if (self.bgmVolume > 0) then
+			msg.post("/guis#mainmenu", "decrease_bgm")
+			self.bgmVolume = self.bgmVolume - 0.1
+			
+			if (self.bgmVolume < 0 or self.bgmVolume > 1) then 
+				gui.set_text(gui.get_node("bgm_volume_value"), 0)
+			else
+				gui.set_text(gui.get_node("bgm_volume_value"), self.bgmVolume)
+			end
+			gui.animate(decreaseBGM, gui.PROP_SCALE, vmath.vector3(1.5, 1.5, 0), go.EASING_OUTQUINT, 0.2)
+			timer.delay(0.2, false, function()
+				gui.animate(decreaseBGM, gui.PROP_SCALE, vmath.vector3(1.2, 1.2, 0), go.EASING_OUTQUINT, 0.2)
+			end)
+			sys.save(filename, { volume = self.bgmVolume })
+			end
+		end
+	end
+end

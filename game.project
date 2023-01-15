@@ -1,5 +1,5 @@
 [project]
-title = Tubes
+title = Buffet Rush
 dependencies = 
 
 [bootstrap]
@@ -18,7 +18,7 @@ height = 960
 shared_state = 1
 
 [windows]
-app_icon = /assets/app_icons/appicon.ico
+app_icon = /assets/images/favicon.ico
 
 [osx]
 app_icon = /assets/app_icons/appicon.icns
